@@ -7,26 +7,44 @@ require 'liquid'
 
 class TemplateCache
 	# template cache system
+
 	def initialize
-		@templates = {}
-		@mtimes = {}
+		@templates,@mtimes = {}
+		@debug = false
 	end
+	
+	def debug
+		@debug = true
+	end
+
 	def get(tname)
-		p @templates
-		p @mtimes
-		if @templates[tname] != nil
-			return @templates[tname]
+		internal(tname) {|i|;return i}
+	end
+
+	private
+	def internal(tname)
+		#begin
+		if @debug
+			p "debug:templates #{@templates}"
+			p "debug:mtimes #{@mtimes}"
+			p ""
+		end
+		#rescue
+		#	p 'debug error.'
+		#end
+		if @templates[tname]!=nil and @templates[tname]!=""
+			yield @templates[tname]
 		else
 			begin
-				@templates[tname]=open("./#{tname}.liquid").read()
-				@mtimes[tname]=File.mtime("./#{tname}.liquid")
+				@mtimes[tname] = File.mtime("./#{tname}.liquid")
+				yield @templates[tname] = open("./#{tname}.liquid").read()
 			rescue
-				"Woops, hey there, looks like something went wrong here... :/"
+				yield "Woops, hey there, looks like something went wrong here... :/"
 			end
 		end
 		update(tname)
 	end
-	private
+
 	def update(tname)
 		begin
 			if File.mtime(@templates[tname]) != @mtimes[tname]
@@ -37,6 +55,7 @@ class TemplateCache
 			''
 		end
 	end
+
 end
 
 tc = TemplateCache.new
@@ -55,10 +74,9 @@ end
 
 get '/*' do
 	p 'tc.get'+tc.get("index")
-	#liquid :page, :locals => { :key => 'value' }
 	p "params#{params}"
 	begin
-		p "#{params[:splat][0].split('/')}"
+		#p "#{params[:splat][0].split('/')}"
 		Liquid::Template.parse( tc.get("#{params[:splat][0].split('/')[0]}") ).render( 'params' => params[:splat][0].split('/').drop(1) )
 	rescue
 		Liquid::Template.parse( tc.get("#{params[:splat][0]}") ).render( 'params' => "#{params[:splat][0].downcase.capitalize}" )
