@@ -1,20 +1,22 @@
 require 'sinatra'
 require 'liquid'
 
-# START SINATRA SETTINGS
-#set :root, File.dirname(__FILE__)
-enable  :sessions
-if File.exist? 'start'
-	set :environment, :production
-end
 
+# START SINATRA SETTINGS
+set :root, File.dirname(__FILE__)
+enable  :sessions
+if File.exist? 'start' # if the launch file exists
+	set :environment, :production # launch with production settings
+end
 # END SINATRA SETTINGS
+
 
 class TemplateCache
 	# template cache system
 
 	def initialize
-		@templates,@mtimes = {}
+		@templates = {}
+		@mtimes = {}
 		@debug = false
 	end
 	
@@ -30,20 +32,22 @@ class TemplateCache
 	def internal(tname)
 		#begin
 		if @debug
-			p "debug:templates #{@templates}"
-			p "debug:mtimes #{@mtimes}"
+			p "debug:templates::#{@templates}"
+			p "debug:mtimes::#{@mtimes}"
 			p ""
 		end
 		#rescue
 		#	p 'debug error.'
 		#end
-		if @templates[tname]!=nil and @templates[tname]!=""
+		if @templates.has_key? tname
 			yield @templates[tname]
 		else
 			begin
 				@mtimes[tname] = File.mtime("./#{tname}.liquid")
-				yield @templates[tname] = open("./#{tname}.liquid").read()
-			rescue
+				@templates[tname] = open("./#{tname}.liquid").read()
+				yield @templates[tname]
+			rescue Exception => er
+				p "Exception::#{er}"
 				yield "Woops, hey there, looks like something went wrong here... :/"
 			end
 		end
@@ -60,10 +64,10 @@ class TemplateCache
 			''
 		end
 	end
-
 end
 
 tc = TemplateCache.new
+tc.debug
 
 get '/' do
 	begin
@@ -78,8 +82,8 @@ get '/favicon.ico' do
 end
 
 get '/*' do
-	p 'tc.get'+tc.get("index")
-	p "params#{params}"
+	p 'tc.get::'+tc.get("index")
+	p "params::#{params}"
 	begin
 		#p "#{params[:splat][0].split('/')}"
 		Liquid::Template.parse( tc.get("#{params[:splat][0].split('/')[0]}") ).render( 'params' => params[:splat][0].split('/').drop(1) )
