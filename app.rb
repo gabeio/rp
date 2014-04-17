@@ -3,6 +3,11 @@ require 'liquid'
 
 # START SINATRA SETTINGS
 #set :root, File.dirname(__FILE__)
+enable  :sessions
+if File.exist? 'start'
+	set :environment, :production
+end
+
 # END SINATRA SETTINGS
 
 class TemplateCache
